@@ -90,3 +90,12 @@ def match_points(A, B, scores, threshold):
     # return positions of corresponding points
     return a_pos[keeps, :3], b_pos[best_indcs[keeps], :3]
 
+def cull_boundary_points(points, distance, volshape):
+    """
+    Only retain points farther than distance from the edges of volume with shape volshape
+    """
+    xlim, ylim, zlim = [i-distance for i in volshape]
+    idx = np.argwhere((points[0,:]>distance) & (points[0,:]<ylim) \
+                    & (points[1,:]>distance) & (points[1,:]<xlim) \
+                    & (points[2,:]>distance) & (points[2,:]<zlim))
+    return np.squeeze(points[:,idx])
