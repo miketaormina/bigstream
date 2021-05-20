@@ -133,6 +133,7 @@ def prepare_piecewise_ransac_affine(
             block_origin = block_info[0]['array-location'][0]
             block_shape = block_info[0]['shape']
             fix_spots0 = features.cull_boundary_points(fix_spots, 0,block_shape,block_origin)
+            fix_spots0[:,0:3] -= np.array(block_origin).reshape((1,3))
         else:
             fix_spots0 = None
         if mov_spots is not None:
@@ -140,6 +141,7 @@ def prepare_piecewise_ransac_affine(
             block_origin = block_info[1]['array-location'][0]
             block_shape = block_info[1]['shape']
             mov_spots0 = features.cull_boundary_points(mov_spots, 0,block_shape,block_origin)
+            mov_spots0 -= np.array(block_origin).reshape((1,3))
         else:
             mov_spots0 = None
         # compute affine
