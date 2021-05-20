@@ -59,7 +59,7 @@ def ransac_affine(
             ns = mov_spots.shape[0]
             print(f'MOVING image: found {ns} key points')
     else:
-        mov_spots = features.cull_boundary_points(mov_spots, cc_radius, mov.shape)
+        #mov_spots = features.cull_boundary_points(mov_spots, cc_radius, mov.shape)
         if mov_spots.shape[1]==3:
             mov_spots = np.hstack([mov_spots, np.ones((mov_spots.shape[0], 1))])
 
@@ -106,6 +106,8 @@ def prepare_piecewise_ransac_affine(
     max_radius,
     match_threshold,
     blocksize,
+    fix_spots=None,
+    mov_spots=None,
     **kwargs,
 ):
     """
@@ -121,12 +123,30 @@ def prepare_piecewise_ransac_affine(
     mov_da = da.from_array(mov, chunks=blocksize)
 
     # wrap affine function
-    def wrapped_ransac_affine(x, y, block_info=None):
-
+    wkwargs = {'fix_spots':fix_spots, 'mov_spots':mov_spots}
+    def wrapped_ransac_affine(x, y, block_info=None, **wkwargs):
+        
+        fix_spots = wkwargs.get('fix_spots', None)
+        mov_spots = wkwargs.get('mov_spots',None)
+        if fix_spots is not None:
+            #find spots in this block
+            block_origin = block_info[0]['array-location'][0]
+            block_shape = block_info[0]['shape']
+            fix_spots0 = features.cull_boundary_points(fix_spots, 0,block_shape,block_origin)
+        else:
+            fix_spots0 = None
+        if mov_spots is not None:
+            #find spots in this block
+            block_origin = block_info[1]['array-location'][0]
+            block_shape = block_info[1]['shape']
+            mov_spots0 = features.cull_boundary_points(mov_spots, 0,block_shape,block_origin)
+        else:
+            mov_spots0 = None
         # compute affine
         affine = ransac_affine(
             x, y, fix_spacing, mov_spacing,
             min_radius, max_radius, match_threshold,
+            fix_spots=fix_spots0, mov_spots=mov_spots0,
             **kwargs,
         )
 
