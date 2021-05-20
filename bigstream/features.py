@@ -95,7 +95,7 @@ def cull_boundary_points(points, distance, volshape):
     Only retain points farther than distance from the edges of volume with shape volshape
     """
     xlim, ylim, zlim = [i-distance for i in volshape]
-    idx = np.argwhere((points[0,:]>distance) & (points[0,:]<ylim) \
-                    & (points[1,:]>distance) & (points[1,:]<xlim) \
-                    & (points[2,:]>distance) & (points[2,:]<zlim))
-    return np.squeeze(points[:,idx])
+    idx = np.argwhere((np.floor(points[:,0])>distance) & (np.ceil(points[:,0])<ylim-1) \
+                    & (np.floor(points[:,1])>distance) & (np.ceil(points[:,1])<xlim-1) \
+                    & (np.floor(points[:,2])>distance) & (np.ceil(points[:,2])<zlim-1))
+    return np.squeeze(points[idx,:])
