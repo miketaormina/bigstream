@@ -40,7 +40,9 @@ def ransac_affine(
             ns = fix_spots.shape[0]
             print(f'FIXED image: found {ns} key points')
     else:
-        fix_spots = features.cull_boundary_points(fix_spots, cc_radius, fix.shape)
+        # Not sure what the convention should be for pixel vs. physical coordinates.
+        # This is assuming pixels at the same resolution as `fix` and `mov`.
+        #fix_spots = features.cull_boundary_points(fix_spots, cc_radius, fix.shape)
         if fix_spots.shape[1]==3:
             fix_spots = np.hstack([fix_spots, np.ones((fix_spots.shape[0],1))])
 
