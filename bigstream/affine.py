@@ -39,6 +39,10 @@ def ransac_affine(
         if verbose:
             ns = fix_spots.shape[0]
             print(f'FIXED image: found {ns} key points')
+    else:
+        fix_spots = features.cull_boundary_points(fix_spots, cc_radius, fix.shape)
+        if fix_spots.shape[1]==3:
+            fix_spots = np.hstack([fix_spots, np.ones((fix_spots.shape[0],1))])
 
     if mov_spots is None:
         mov_spots = features.blob_detection(
@@ -52,6 +56,10 @@ def ransac_affine(
         if verbose:
             ns = mov_spots.shape[0]
             print(f'MOVING image: found {ns} key points')
+    else:
+        mov_spots = features.cull_boundary_points(mov_spots, cc_radius, mov.shape)
+        if mov_spots.shape[1]==3:
+            mov_spots = np.hstack([mov_spots, np.ones((mov_spots.shape[0], 1))])
 
     # sort
     sort_idx = np.argsort(fix_spots[:, 3])[::-1]
