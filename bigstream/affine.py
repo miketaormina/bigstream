@@ -123,34 +123,45 @@ def prepare_piecewise_ransac_affine(
     mov_da = da.from_array(mov, chunks=blocksize)
 
     # wrap affine function
+    # keywords to pass to wrapped function (can I just pass kwargs?)
     wkwargs = {'fix_spots':fix_spots, 'mov_spots':mov_spots}
     def wrapped_ransac_affine(x, y, block_info=None, **wkwargs):
         
         fix_spots = wkwargs.get('fix_spots', None)
         mov_spots = wkwargs.get('mov_spots',None)
+        run_affine=True
         if fix_spots is not None:
             #find spots in this block
-            block_origin = block_info[0]['array-location'][0]
+            block_origin = [i[0] for i in block_info[0]['array-location']]
             block_shape = block_info[0]['shape']
             fix_spots0 = features.cull_boundary_points(fix_spots, 0,block_shape,block_origin)
-            fix_spots0[:,0:3] -= np.array(block_origin).reshape((1,3))
+            if fix_spots0.shape[0]<4:
+                run_affine=False
+            else:
+                fix_spots0[:,0:3] -= np.array(block_origin).reshape((1,3))
         else:
             fix_spots0 = None
         if mov_spots is not None:
             #find spots in this block
-            block_origin = block_info[1]['array-location'][0]
+            block_origin = [i[0] for i in block_info[1]['array-location']]
             block_shape = block_info[1]['shape']
             mov_spots0 = features.cull_boundary_points(mov_spots, 0,block_shape,block_origin)
-            mov_spots0 -= np.array(block_origin).reshape((1,3))
+            if mov_spots0.shape[0]<4:
+                run_affine=False
+            else:
+                mov_spots0[:,0:3] -= np.array(block_origin).reshape((1,3))
         else:
             mov_spots0 = None
         # compute affine
-        affine = ransac_affine(
-            x, y, fix_spacing, mov_spacing,
-            min_radius, max_radius, match_threshold,
-            fix_spots=fix_spots0, mov_spots=mov_spots0,
-            **kwargs,
-        )
+        if run_affine:
+            affine = ransac_affine(
+                x, y, fix_spacing, mov_spacing,
+                min_radius, max_radius, match_threshold,
+                fix_spots=fix_spots0, mov_spots=mov_spots0,
+                **kwargs,
+            )
+        else:
+            affine = np.eye(4)
 
         # adjust for block origin
         idx = np.array(block_info[0]['chunk-location'])
@@ -165,6 +176,7 @@ def prepare_piecewise_ransac_affine(
     # affine align all chunks
     return da.map_overlap(
         wrapped_ransac_affine, fix_da, mov_da,
+        fix_spots=fix_spots, mov_spots=mov_spots,
         depth=tuple(overlap),
         boundary='reflect',
         trim=False,
