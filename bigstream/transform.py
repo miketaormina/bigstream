@@ -3,7 +3,7 @@ from scipy.ndimage import map_coordinates
 import zarr
 import dask.array as da
 import dask.delayed as delayed
-from dask_stitch.local_affine import local_affines_to_field
+from dask_stitch.local_affine import local_affines_to_field, geometric_transform
 
 
 def position_grid(shape):
@@ -158,3 +158,35 @@ def prepare_apply_local_affines(
         transpose=transpose,
     )
 
+def prepare_apply_geometric_transform(fix, mov, transform, \
+    mov_spacing, blocksize,
+    transpose=[False,]*3):
+
+    # wrap transform as dask array, define chunks
+    transform_da = transform
+    if not isinstance(transform, da.Array):
+        transform_da = da.from_array(transform)
+    if transpose[2]:
+        transform_da = transform_da.transpose(2,1,0,3)
+        transform_da = transform_da[..., ::-1]
+    transform_da = transform_da.rechunk(tuple(blocksize) )
+
+    # wrap moving data appropriately
+    if isinstance(mov, np.ndarray):
+        mov_s = delayed(mov)
+    elif isinstance(mov, zarr.Array):
+        mov_s = mov
+
+    def geo_block(x, tform, source, block_info=None):
+        block_origin = np.array(block_info[0]['array-location'])[:,0]
+        def mapping(r):
+            r += block_origin + (1,)
+            M = np.linalg.inv(tform)
+            return tuple(np.matmul(M, r)[0:3])
+
+        return geometric_transform(source, mapping,
+            target_shape=x.shape,
+            order=1, prefilter=False)
+
+    mov_tformed = da.empty(shape=fix.shape, chunks=blocksize, dtype=fix.dtype)
+    return da.map_blocks(geo_block, mov_tformed, transform_da, source=mov_s)
