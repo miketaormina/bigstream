@@ -1,9 +1,9 @@
 import numpy as np
-from scipy.ndimage import map_coordinates
+from scipy.ndimage import map_coordinates, geometric_transform
 import zarr
 import dask.array as da
 import dask.delayed as delayed
-from dask_stitch.local_affine import local_affines_to_field, geometric_transform
+from dask_stitch.local_affine import local_affines_to_field
 
 
 def position_grid(shape):
